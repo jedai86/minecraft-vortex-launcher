@@ -27,9 +27,9 @@ Check the [**Releases**](https://github.com/jedai86/minecraft-vortex-launcher/re
 
 ## Screenshots
 
-![settings](https://i.imgur.com/dkiweug.png)
-![main window](https://i.imgur.com/pd2tnnK.png)
-![client downloader](https://i.imgur.com/1QTjiDw.png)
+
+![main window](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/screen/Vlauncher_2.png)
+
 
 ---
 

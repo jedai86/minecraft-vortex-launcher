@@ -1,4 +1,15 @@
+﻿; Prevents multiple instances------------------------------------------------------------
+
+#MyApp="Vortex Minecraft Launcher"
+Mutex=CreateMutex_(0,1,#MyApp)
+If GetLastError_()=#ERROR_ALREADY_EXISTS
+  MessageRequester(#MyApp,"One instance is already started.")
+  End
+EndIf
+
 EnableExplicit
+
+; Definition of variables------------------------------------------------------------
 
 Define.s workingDirectory = GetPathPart(ProgramFilename())
 Global.s tempDirectory = GetTemporaryDirectory()
@@ -8,7 +19,7 @@ Global.i downloadOkButton
 Global.i downloadThread
 Global.i downloadThreadsAmount
 Global.i asyncDownload
-Global.i versionsGadget, playButton, javaListGadget
+Global.i versionsGadget, playButton, javaListGadget, saveMainButton, exitProgButton
 Global.i progressBar, filesLeft, progressWindow, downloadingClientTextGadget
 Global.i versionsDownloadGadget, downloadVersionButton
 Global.i forceDownloadMissingLibraries
@@ -17,36 +28,75 @@ Global.s versionsManifestString
 Define *FileBuffer
 Define.i javaProgram
 Define.i Event, font, ramGadget, nameGadget, javaPathGadget, argsGadget, downloadButton, settingsButton, launcherVersionGadget, launcherAuthorGadget
-Define.i saveLaunchString, versionsTypeGadget, saveLaunchStringGadget, launchStringFile, inheritsJsonObject, jsonInheritsArgumentsModernMember
+Define.i saveLaunchString, versionsTypeGadget, saveLaunchStringGadget, launchStringFile, inheritsJsonObject, jsonInheritsArgumentsModernMember, allocateAllRam, allocateAllRamGadget, useOptimisedLaunch, useOptimisedLaunchGadget
 Define.i argsTextGadget, javaBinaryPathTextGadget, downloadThreadsTextGadget, downloadAllFilesGadget, javaPathGadget
 Define.i gadgetsWidth, gadgetsHeight, gadgetsIndent, windowWidth, windowHeight
 Define.i listOfFiles, jsonFile, jsonObject, jsonObjectObjects, fileSize, jsonJarMember, jsonArgumentsArray, jsonArrayElement, inheritsJson, clientSize
 Define.i releaseTimeMember, releaseTime, jsonJvmArray, loggingMember, loggingClientMember, loggingFileMember, logConfSize
 
-Define.s playerName, ramAmount, clientVersion, javaBinaryPath, fullLaunchString, assetsIndex, clientUrl, fileHash, versionToDownload
+Define.s playerName, ramAmount, clientVersion, javaBinaryPath, fullLaunchString, assetsIndex, clientUrl, fileHash, versionToDownload, gameDir, javaBinaryPathToSave
 Define.s assetsIndex, clientMainClass, clientArguments, inheritsClientJar, customLaunchArguments, clientJarFile, nativesPath, librariesString
 Define.s uuid, jvmArguments, logConfId, logConfUrl, logConfArgument
 
 Define.i downloadMissingLibraries, jsonArgumentsMember, jsonArgumentsModernMember, jsonInheritsFromMember
-Define.i downloadMissingLibrariesGadget, downloadThreadsGadget, asyncDownloadGadget, saveSettingsButton, useCustomJavaGadget, useCustomParamsGadget, keepLauncherOpenGadget
+Define.i downloadMissingLibrariesGadget, downloadThreadsGadget, asyncDownloadGadget, saveSettingsButton, useCustomJavaGadget, useCustomParamsGadget, keepLauncherOpenGadget, closeSettingsButton
 Define.i i
+Define.i maxSystemMemory, maxFreeMemory, defaultMemory
 
-Define.s playerNameDefault = "Name", ramAmountDefault = "700"
-Define.s customLaunchArgumentsDefault = "-Xss1M -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M"
+; Memory detection
+maxSystemMemory = MemoryStatus(#PB_System_TotalPhysical) / 1048576
+
+Select maxSystemMemory
+  Case 128 To 1899
+    defaultMemory = 512
+    maxFreeMemory = 512
+  Case 1900 To 2100
+    defaultMemory = 1000
+    maxFreeMemory = 1024
+  Case 3000 To 4100
+    defaultMemory = 2048
+    maxFreeMemory = 2536
+  Case 5900 To 6100
+    defaultMemory = 3072
+    maxFreeMemory = 4096
+  Case 8000 To 9000
+    defaultMemory = 6000
+    maxFreeMemory = 6144
+  Case 9900 To 13000
+    defaultMemory = 8000
+    maxFreeMemory = 8192
+  Case 14000 To 17000
+    defaultMemory = 8192
+    maxFreeMemory = maxSystemMemory - 2048
+  Case 17100 To 512000
+    defaultMemory = 10240
+    maxFreeMemory = maxSystemMemory - 4096
+  Default
+    defaultMemory = 512
+    maxFreeMemory = 512
+EndSelect
+    
+
+Define.s playerNameDefault = GetEnvironmentVariable("USERNAME"), ramAmountDefault = Str(defaultMemory)
+Define.s customLaunchArgumentsDefault = "-XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:ParallelGCThreads=" + Str(CountCPUs(#PB_System_CPUs)) + " -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M"
 Define.s customOldLaunchArgumentsDefault = "-XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M"
-Define.i downloadThreadsAmountDefault = 10
-Define.i asyncDownloadDefault = 0
-Define.i downloadMissingLibrariesDefault = 0
+Define.s customOptimizedLaunchArgumentsDefault = "-XX:+UnlockExperimentalVMOptions -XX:ParallelGCThreads=" + Str(CountCPUs(#PB_System_CPUs)) + " -XX:InitiatingHeapOccupancyPercent=10 -XX:AllocatePrefetchStyle=1 -XX:+UseSuperWord -XX:+OptimizeFill -XX:LoopUnrollMin=4 -XX:LoopMaxUnroll=16 -XX:+UseLoopPredicate -XX:+RangeCheckElimination -XX:+CMSCleanOnEnter -XX:+EliminateLocks -XX:+DoEscapeAnalysis -XX:+TieredCompilation -XX:+UseCodeCacheFlushing -XX:+UseFastJNIAccessors -XX:+CMSScavengeBeforeRemark -XX:+ExplicitGCInvokesConcurrentAndUnloadsClasses -XX:+ScavengeBeforeFullGC -XX:+AlwaysPreTouch -XX:+UseFastAccessorMethods -XX:G1HeapWastePercent=10 -XX:G1MaxNewSizePercent=10 -XX:G1HeapRegionSize=32M -XX:G1NewSizePercent=10 -XX:MaxGCPauseMillis=200 -XX:+OptimizeStringConcat -XX:+UseParNewGC -XX:+UseNUMA -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:SurvivorRatio=2 -XX:+DisableExplicitGC" 
+Define.i downloadThreadsAmountDefault = 100
+Define.i asyncDownloadDefault = 1
+Define.i downloadMissingLibrariesDefault = 1
 Define.i downloadAllFilesDefault = 0
 Define.i versionsTypeDefault = 0
-Define.i saveLaunchStringDefault = 0
+Define.i saveLaunchStringDefault = 1
 Define.i useCustomParamsDefault = 0
 Define.i keepLauncherOpenDefault = 0
+Define.i allocateAllRamDefault = 0
+Define.i useOptimisedLaunchDefault = 0
 Global.i useCustomJavaDefault = 0
 Global.s javaBinaryPathDefault = "C:\jre8\bin\javaw.exe"
 
-Define.s launcherVersion = "1.1.17"
-Define.s launcherDeveloper = "Kron4ek"
+Define.s launcherVersion = "2.0.0"
+Define.s launcherDeveloper = "Kron4ek&Jedai86"
+
 
 Declare assetsToResources(assetsIndex.s)
 Declare findJava()
@@ -64,6 +114,7 @@ Declare.s removeSpacesFromVersionName(clientVersion.s)
 programFilesDir(0) = GetEnvironmentVariable("ProgramW6432") + "\"
 programFilesDir(1) = GetEnvironmentVariable("PROGRAMFILES") + "\"
 
+
 SetCurrentDirectory(workingDirectory)
 OpenPreferences("vortex_launcher.conf")
 
@@ -74,8 +125,11 @@ DeleteFile(tempDirectory + "vlauncher_download_list.txt")
 
 RemoveEnvironmentVariable("_JAVA_OPTIONS")
 
+
 windowWidth = 250
-windowHeight = 250
+windowHeight = 280
+
+; Main code------------------------------------------------------------
 
 If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Minecraft Launcher")
 
@@ -93,16 +147,19 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
   versionsGadget = ComboBoxGadget(#PB_Any, gadgetsIndent, 65, gadgetsWidth, gadgetsHeight)
   javaListGadget = ComboBoxGadget(#PB_Any, gadgetsIndent, 95, gadgetsWidth, gadgetsHeight)
 
-  playButton = ButtonGadget(#PB_Any, gadgetsIndent, 130, gadgetsWidth, gadgetsHeight + 5, "Play")
+  playButton = ButtonGadget(#PB_Any, gadgetsIndent, 130, gadgetsWidth, gadgetsHeight + 5, "PLAY")
   downloadButton = ButtonGadget(#PB_Any, gadgetsIndent, 165, gadgetsWidth, gadgetsHeight + 5, "Downloader")
   settingsButton = ButtonGadget(#PB_Any, gadgetsIndent, 200, gadgetsWidth, gadgetsHeight + 5, "Settings")
+  saveMainButton = ButtonGadget(#PB_Any, gadgetsIndent, 235, 117, gadgetsHeight + 5, "Save")
+  exitProgButton = ButtonGadget(#PB_Any, gadgetsIndent*2 + 117, 235, 117, gadgetsHeight + 5, "Exit")
+
 
   If LoadFont(0, "Arial", 10, #PB_Font_Bold)
     SetGadgetFont(playButton, FontID(0))
     SetGadgetFont(downloadButton, FontID(0))
   EndIf
 
-  launcherAuthorGadget = TextGadget(#PB_Any, 2, windowHeight - 10, 70, 20, "by " + launcherDeveloper)
+  launcherAuthorGadget = TextGadget(#PB_Any, 2, windowHeight - 10, 100, 20, "by " + launcherDeveloper)
   launcherVersionGadget = TextGadget(#PB_Any, windowWidth - 34, windowHeight - 10, 50, 20, "v" + launcherVersion)
   If LoadFont(1, "Arial", 7)
     font = FontID(1) : SetGadgetFont(launcherAuthorGadget, font) : SetGadgetFont(launcherVersionGadget, font)
@@ -115,12 +172,14 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
     Event = WaitWindowEvent()
 
     If Event = #PB_Event_Gadget
-      Select EventGadget()
+      Select EventGadget()   
+; PLAY Button 
         Case playButton
           ramAmount = GetGadgetText(ramGadget)
           clientVersion = GetGadgetText(versionsGadget)
           playerName = GetGadgetText(nameGadget)
           javaBinaryPath = GetGadgetText(javaListGadget)
+          javaBinaryPathToSave = GetGadgetText(javaListGadget)
           downloadMissingLibraries = ReadPreferenceInteger("DownloadMissingLibs", downloadMissingLibrariesDefault)
           librariesString = ""
           clientArguments = ""
@@ -148,15 +207,25 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
               javaBinaryPath = programFilesDir(0) + "Java\" + javaBinaryPath + "\bin\javaw.exe"
             EndIf
 
-            If Val(ramAmount) < 350
-              ramAmount = "350"
+            If Val(ramAmount) < 512
+              ramAmount = "512"
 
-              MessageRequester("Warning", "You allocated too low amount of memory!" + #CRLF$ + #CRLF$ + "Allocated memory set to 350 MB to prevent crashes.")
+              MessageRequester("Warning", "You allocated too low amount of memory!" + #CRLF$ + #CRLF$ + "Allocated memory set to 512 MB to prevent crashes.")
             EndIf
+            
+
+            If Val(ramAmount) > maxFreeMemory
+              ramAmount = Str(maxFreeMemory)
+
+              MessageRequester("Warning", "You allocated too much amount of memory!" + #CRLF$ + #CRLF$ + "Allocated memory set to maximum for your system to prevent crashes.")
+            EndIf 
 
             WritePreferenceString("Name", playerName)
             WritePreferenceString("Ram", ramAmount)
             WritePreferenceString("ChosenVer", clientVersion)
+            If FindString(javaBinaryPathToSave, "Java not found") = 0 And FindString(javaBinaryPathToSave, "Custom Java enabled in Settings") = 0            
+              WritePreferenceString("javaBin", javaBinaryPathToSave) 
+            EndIf
 
             If RunProgram(javaBinaryPath, "-version", workingDirectory)
               jsonFile = ParseJSON(#PB_Any, fileRead("versions\" + clientVersion + "\" + clientVersion + ".json"))
@@ -319,16 +388,31 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
                   Else
                     customLaunchArguments = customLaunchArgumentsDefault
                   EndIf
+                  
+                  useOptimisedLaunch = ReadPreferenceInteger("useOptimisedLaunch", useOptimisedLaunchDefault)
+                  
+                  If useOptimisedLaunch And FindString(javaBinaryPath, "1.8.0") <> 0
+                    customLaunchArguments = customOptimizedLaunchArgumentsDefault
+                  EndIf
 
                   If ReadPreferenceInteger("UseCustomParameters", useCustomParamsDefault)
                     customLaunchArguments = ReadPreferenceString("LaunchArguments", customLaunchArgumentsDefault)
                   EndIf
+                  
+                  allocateAllRam = ReadPreferenceInteger("allocateAllRam", allocateAllRamDefault)
+                  
+                  If allocateAllRam
+                    fullLaunchString = "-Xms" + ramAmount + "M " + "-Xmx" + ramAmount + "M " + customLaunchArguments + " -Dlog4j2.formatMsgNoLookups=true " + logConfArgument + " " + jvmArguments + " " + clientMainClass + " " + clientArguments
+                  Else
+                    fullLaunchString = "-Xmx" + ramAmount + "M " + customLaunchArguments + " -Dlog4j2.formatMsgNoLookups=true " + logConfArgument + " " + jvmArguments + " " + clientMainClass + " " + clientArguments
+                  EndIf
+                  
+                  gameDir = Chr(34) + ReplaceString(workingDirectory, "\", "\\") + Chr(34)
 
-                  fullLaunchString = "-Xmx" + ramAmount + "M " + customLaunchArguments + " -Dlog4j2.formatMsgNoLookups=true " + logConfArgument + " " + jvmArguments + " " + clientMainClass + " " + clientArguments
-
+                  
                   fullLaunchString = ReplaceString(fullLaunchString, "${auth_player_name}", playerName)
                   fullLaunchString = ReplaceString(fullLaunchString, "${version_name}", clientVersion)
-                  fullLaunchString = ReplaceString(fullLaunchString, "${game_directory}", ".")
+                  fullLaunchString = ReplaceString(fullLaunchString, "${game_directory}", gameDir)
                   fullLaunchString = ReplaceString(fullLaunchString, "${assets_root}", "assets")
                   fullLaunchString = ReplaceString(fullLaunchString, "${auth_uuid}", uuid)
                   fullLaunchString = ReplaceString(fullLaunchString, "${auth_access_token}", "00000000000000000000000000000000")
@@ -382,6 +466,55 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
               MessageRequester("Error", "Name is too short! Minimum length is 3.")
             EndIf
           EndIf
+; SAVE Button           
+        Case saveMainButton
+          ramAmount = GetGadgetText(ramGadget)
+          clientVersion = GetGadgetText(versionsGadget)
+          playerName = GetGadgetText(nameGadget)
+          javaBinaryPath = GetGadgetText(javaListGadget)
+                    
+          If FindString(playerName, " ")
+            playerName = ReplaceString(playerName, " ", "")
+          EndIf
+          
+          If ramAmount And Len(playerName) >= 3
+               If Val(ramAmount) < 512
+                ramAmount = "512"
+          
+                MessageRequester("Warning", "You allocated too low amount of memory!" + #CRLF$ + #CRLF$ + "Allocated memory set to 512 MB to prevent crashes.")
+              EndIf
+              
+          
+              If Val(ramAmount) > maxFreeMemory
+                ramAmount = Str(maxFreeMemory)
+          
+                MessageRequester("Warning", "You allocated too much amount of memory!" + #CRLF$ + #CRLF$ + "Allocated memory set to maximum for your system to prevent crashes.")
+              EndIf 
+          
+              WritePreferenceString("Name", playerName)
+              WritePreferenceString("Ram", ramAmount)
+              
+              If FindString(clientVersion, "Versions not found") = 0
+                If FindString(clientVersion, " ")
+                  clientVersion = removeSpacesFromVersionName(clientVersion)
+                EndIf
+              
+                WritePreferenceString("ChosenVer", clientVersion)
+              EndIf
+              
+              If FindString(javaBinaryPath, "Java not found") = 0 And FindString(javaBinaryPath, "Custom Java enabled in Settings") = 0            
+                WritePreferenceString("javaBin", javaBinaryPath) 
+              EndIf
+          Else
+            If playerName = ""
+              MessageRequester("Error", "Enter your desired name.")
+            ElseIf ramAmount = ""
+              MessageRequester("Error", "Enter RAM amount.")
+            ElseIf Len(playerName) < 3
+              MessageRequester("Error", "Name is too short! Minimum length is 3.")
+            EndIf
+          EndIf
+ ; Download Button           
         Case downloadButton
           InitNetwork()
 
@@ -413,6 +546,7 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
         Case versionsTypeGadget
           ClearGadgetItems(versionsDownloadGadget)
           parseVersionsManifest(GetGadgetState(versionsTypeGadget))
+; Download Versions Button 
         Case downloadVersionButton
           versionToDownload = GetGadgetText(versionsDownloadGadget)
 
@@ -489,20 +623,21 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
           Else
             MessageRequester("Download Error", "Seems like you have no internet connection!")
           EndIf
+; Settings Button  
         Case settingsButton
           DisableGadget(settingsButton, 1)
 
-          If OpenWindow(3, #PB_Ignore, #PB_Ignore, 335, 255, "Vortex Launcher Settings")
+          If OpenWindow(3, #PB_Ignore, #PB_Ignore, 345, 295, "Vortex Launcher Settings")
               argsTextGadget = TextGadget(#PB_Any, 5, 5, 80, 30, "Launch parameters:")
-              argsGadget = StringGadget(#PB_Any, 70, 5, 260, 25, ReadPreferenceString("LaunchArguments", customLaunchArgumentsDefault))
+              argsGadget = StringGadget(#PB_Any, 75, 5, 260, 25, ReadPreferenceString("LaunchArguments", customLaunchArgumentsDefault))
               GadgetToolTip(argsGadget, "These parameters will be used to launch Minecraft")
 
               javaBinaryPathTextGadget = TextGadget(#PB_Any, 5, 35, 80, 30, "Custom Java path:")
-              javaPathGadget = StringGadget(#PB_Any, 70, 35, 260, 25, ReadPreferenceString("JavaPath", javaBinaryPathDefault))
+              javaPathGadget = StringGadget(#PB_Any, 75, 35, 260, 25, ReadPreferenceString("JavaPath", javaBinaryPathDefault))
               GadgetToolTip(javaPathGadget, "Absolute path to Java executable")
 
               downloadThreadsTextGadget = TextGadget(#PB_Any, 5, 65, 80, 30, "Download threads:")
-              downloadThreadsGadget = StringGadget(#PB_Any, 70, 65, 260, 25, ReadPreferenceString("DownloadThreads", Str(downloadThreadsAmountDefault)), #PB_String_Numeric)
+              downloadThreadsGadget = StringGadget(#PB_Any, 75, 65, 260, 25, ReadPreferenceString("DownloadThreads", Str(downloadThreadsAmountDefault)), #PB_String_Numeric)
               GadgetToolTip(downloadThreadsGadget, "Higher numbers may speedup downloads (works only with multi-threads downloads)")
               SetGadgetAttribute(downloadThreadsGadget, #PB_String_MaximumLength, 3)
 
@@ -530,8 +665,17 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
               keepLauncherOpenGadget = 689
               GadgetToolTip(keepLauncherOpenGadget, "Keep the launcher open after launching the game")
               SetGadgetState(keepLauncherOpenGadget, ReadPreferenceInteger("KeepLauncherOpen", keepLauncherOpenDefault))
+              
+              allocateAllRamGadget = CheckBoxGadget(#PB_Any, 5, 215, 300, 20, "Allocate all RAM")
+              GadgetToolTip(allocateAllRamGadget, "Set -XmS and -XmX the same")
+              SetGadgetState(allocateAllRamGadget, ReadPreferenceInteger("allocateAllRam", allocateAllRamDefault))
+              
+              useOptimisedLaunchGadget = CheckBoxGadget(#PB_Any, 5, 235, 300, 20, "Use optimised java args for large modpacks")
+              GadgetToolTip(useOptimisedLaunchGadget, "Use only for Java 8 and versions 1.16.5 and older for large modpacks")
+              SetGadgetState(useOptimisedLaunchGadget, ReadPreferenceInteger("useOptimisedLaunch", useOptimisedLaunchDefault))              
 
-              saveSettingsButton = ButtonGadget(#PB_Any, 5, 220, 325, 30, "Save and apply")
+              saveSettingsButton = ButtonGadget(#PB_Any, 5, 260, 165, 30, "Save")
+              closeSettingsButton = ButtonGadget(#PB_Any, 175, 260, 165, 30, "Close")
 
               DisableGadget(downloadThreadsGadget, Bool(Not GetGadgetState(asyncDownloadGadget)))
               DisableGadget(javaPathGadget, Bool(Not GetGadgetState(useCustomJavaGadget)))
@@ -541,9 +685,9 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
           DisableGadget(argsGadget, Bool(Not GetGadgetState(useCustomParamsGadget)))
         Case useCustomJavaGadget
           DisableGadget(javaPathGadget, Bool(Not GetGadgetState(useCustomJavaGadget)))
-        Case asyncDownloadGadget
-          If GetGadgetState(asyncDownloadGadget)
-            MessageRequester("Warning", "This option is experimental and may cause crashes." + #CRLF$ + #CRLF$ + "You have been warned!")
+        Case useOptimisedLaunchGadget
+          If GetGadgetState(useOptimisedLaunchGadget)
+            MessageRequester("Warning", "This option is experimental. Use only for Java 8 and versions 1.16.5 and older for large modpacks" + #CRLF$ + #CRLF$ + "It significantly increases loading time. You have been warned!")
           EndIf
 
           DisableGadget(downloadThreadsGadget, Bool(Not GetGadgetState(asyncDownloadGadget)))
@@ -553,6 +697,8 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
           WritePreferenceInteger("DownloadMissingLibs", GetGadgetState(downloadMissingLibrariesGadget))
           WritePreferenceInteger("AsyncDownload", GetGadgetState(asyncDownloadGadget))
           WritePreferenceInteger("SaveLaunchString", GetGadgetState(saveLaunchStringGadget))
+          WritePreferenceInteger("allocateAllRam", GetGadgetState(allocateAllRamGadget))
+          WritePreferenceInteger("useOptimisedLaunch", GetGadgetState(useOptimisedLaunchGadget))
           WritePreferenceInteger("UseCustomJava", GetGadgetState(useCustomJavaGadget))
           WritePreferenceInteger("UseCustomParameters", GetGadgetState(useCustomParamsGadget))
           WritePreferenceInteger("KeepLauncherOpen", GetGadgetState(keepLauncherOpenGadget))
@@ -568,11 +714,23 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
           If GetGadgetState(useCustomParamsGadget)
             WritePreferenceString("LaunchArguments", GetGadgetText(argsGadget))
           EndIf
-
+          
           findJava()
 
           downloadThreadsAmount = Val(GetGadgetText(downloadThreadsGadget))
           asyncDownload = GetGadgetState(asyncDownloadGadget)
+
+        Case closeSettingsButton
+          CloseWindow(3)
+          DisableGadget(settingsButton, 0)
+          
+        Case exitProgButton
+          If Not IsThread(downloadThread) 
+            End
+          Else
+            MessageRequester("Download in progress", "Wait for download to complete!")
+          EndIf
+          
         Case downloadOkButton
           CloseWindow(progressWindow)
 
@@ -605,10 +763,14 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
       EndIf
     EndIf
 
-  Until Event = #PB_Event_CloseWindow And EventWindow() = 0
+  Until Event = #PB_Event_CloseWindow And EventWindow() = 0 And Not IsThread(downloadThread)
 
   DeleteFile(tempDirectory + "vlauncher_download_list.txt")
 EndIf
+
+; END Main code------------------------------------------------------------
+
+; Procedures------------------------------------------------------------
 
 Procedure findInstalledVersions()
   Protected.s dirName, chosenVer = ReadPreferenceString("ChosenVer", "")
@@ -873,13 +1035,13 @@ Procedure downloadFiles(downloadAllFiles.i)
                 lines - 1
               EndIf
             EndIf
-          ElseIf HTTPProgress(httpArray(i)) = #PB_Http_Success
+          ElseIf HTTPProgress(httpArray(i)) = #PB_HTTP_Success
             currentDownloads - 1
             lines - 1
 
             FinishHTTP(httpArray(i))
             httpArray(i) = 0
-          ElseIf HTTPProgress(httpArray(i)) = #PB_Http_Failed
+          ElseIf HTTPProgress(httpArray(i)) = #PB_HTTP_Failed
             FinishHTTP(httpArray(i))
 
             If retries(i) < allowedRetries
@@ -994,7 +1156,7 @@ Procedure generateProfileJson()
 
     If file
       WriteString(file, "{ " + Chr(34) + "profiles" + Chr(34) + ": { " + Chr(34) + "justProfile" + Chr(34) + ": { " + Chr(34) + "name" + Chr(34) + ": " + Chr(34) + "justProfile" + Chr(34) + ", ")
-      WriteString(file, Chr(34) + "lastVersionId" + Chr(34) + ": " + Chr(34) + "1.12.2" + Chr(34) + " } } }" + #CRLF$)
+      WriteString(file, Chr(34) + "lastVersionId" + Chr(34) + ": " + Chr(34) + "1.18.2" + Chr(34) + " } } }" + #CRLF$)
 
       CloseFile(file)
     EndIf
@@ -1027,8 +1189,8 @@ Procedure.s fileRead(pathToFile.s)
 EndProcedure
 
 Procedure findJava()
-  Protected.s dirName, javaBinaryPath, customJavaPath
-  Protected.i i, directory
+  Protected.s dirName, javaBinaryPath, customJavaPath, javabinConfig, javaItemText
+  Protected.i i, directory, numberJavaItems, k
 
   ClearGadgetItems(javaListGadget)
   DisableGadget(javaListGadget, 0)
@@ -1071,6 +1233,20 @@ Procedure findJava()
 
       DisableGadget(javaListGadget, 1)
       DisableGadget(playButton, 1)
+    Else
+        javaBinaryPath = GetGadgetText(javaListGadget)
+        javabinConfig = ReadPreferenceString("javaBin", "")
+        
+        If javabinConfig <> "" And FindString(javaBinaryPath, "Java not found") = 0
+          numberJavaItems = CountGadgetItems(javaListGadget)
+          For k = 0 To numberJavaItems - 1
+            javaItemText = GetGadgetItemText(javaListGadget, k)
+            If javabinConfig = javaItemText
+              SetGadgetState(javaListGadget, k)
+              Break
+            EndIf
+          Next
+        EndIf
     EndIf
   EndIf
 EndProcedure
@@ -1114,3 +1290,15 @@ Procedure.s removeSpacesFromVersionName(clientVersion.s)
 
   ProcedureReturn newVersionName
 EndProcedure
+
+ReleaseMutex_(Mutex)
+End
+
+; IDE Options = PureBasic 5.72 (Windows - x86)
+; CursorPosition = 96
+; FirstLine = 75
+; Folding = --
+; EnableThread
+; EnableXP
+; UseIcon = mine.ico
+; Executable = Vortex.exe

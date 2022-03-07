@@ -21,7 +21,7 @@ Fast, lightweight and easy to use Minecraft launcher. Natively available for Win
 
 ## Download
 
-Check the [**Releases**](https://github.com/Kron4ek/minecraft-vortex-launcher/releases) page to download the latest launcher version.
+Check the [**Releases**](https://github.com/jedai86/minecraft-vortex-launcher/releases) page to download the latest launcher version.
 
 ---
 
@@ -35,10 +35,6 @@ Check the [**Releases**](https://github.com/Kron4ek/minecraft-vortex-launcher/re
 
 ## License
 
-[GPLv3](https://github.com/Kron4ek/minecraft-vortex-launcher/blob/master/LICENSE.txt)
+[GPLv3](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/LICENSE.txt)
 
 ---
-
-### Mirrors
-
-Mirror on GitLab: https://gitlab.com/Kron4ek/vortex-minecraft-launcher

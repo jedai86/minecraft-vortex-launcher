@@ -81,7 +81,7 @@ Define.s playerNameDefault = GetEnvironmentVariable("USERNAME"), ramAmountDefaul
 Define.s customLaunchArgumentsDefault = "-XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:ParallelGCThreads=" + Str(CountCPUs(#PB_System_CPUs)) + " -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M"
 Define.s customOldLaunchArgumentsDefault = "-XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M"
 Define.s customOptimizedLaunchArgumentsDefault = "-XX:+UnlockExperimentalVMOptions -XX:ParallelGCThreads=" + Str(CountCPUs(#PB_System_CPUs)) + " -XX:InitiatingHeapOccupancyPercent=10 -XX:AllocatePrefetchStyle=1 -XX:+UseSuperWord -XX:+OptimizeFill -XX:LoopUnrollMin=4 -XX:LoopMaxUnroll=16 -XX:+UseLoopPredicate -XX:+RangeCheckElimination -XX:+CMSCleanOnEnter -XX:+EliminateLocks -XX:+DoEscapeAnalysis -XX:+TieredCompilation -XX:+UseCodeCacheFlushing -XX:+UseFastJNIAccessors -XX:+CMSScavengeBeforeRemark -XX:+ExplicitGCInvokesConcurrentAndUnloadsClasses -XX:+ScavengeBeforeFullGC -XX:+AlwaysPreTouch -XX:+UseFastAccessorMethods -XX:G1HeapWastePercent=10 -XX:G1MaxNewSizePercent=10 -XX:G1HeapRegionSize=32M -XX:G1NewSizePercent=10 -XX:MaxGCPauseMillis=200 -XX:+OptimizeStringConcat -XX:+UseParNewGC -XX:+UseNUMA -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:SurvivorRatio=2 -XX:+DisableExplicitGC" 
-Define.i downloadThreadsAmountDefault = 100
+Define.i downloadThreadsAmountDefault = 10
 Define.i asyncDownloadDefault = 1
 Define.i downloadMissingLibrariesDefault = 1
 Define.i downloadAllFilesDefault = 0
@@ -1293,12 +1293,3 @@ EndProcedure
 
 ReleaseMutex_(Mutex)
 End
-
-; IDE Options = PureBasic 5.72 (Windows - x86)
-; CursorPosition = 96
-; FirstLine = 75
-; Folding = --
-; EnableThread
-; EnableXP
-; UseIcon = mine.ico
-; Executable = Vortex.exe

@@ -25,6 +25,9 @@ Global.i versionsDownloadGadget, downloadVersionButton
 Global.i forceDownloadMissingLibraries
 Global.s versionsManifestString
 
+Global Dim javaPaths.s(3)
+Global NewMap javaBinMap.i()
+
 Define *FileBuffer
 Define.i javaProgram
 Define.i Event, font, ramGadget, nameGadget, javaPathGadget, argsGadget, downloadButton, settingsButton, launcherVersionGadget, launcherAuthorGadget
@@ -94,7 +97,7 @@ Define.i useOptimisedLaunchDefault = 0
 Global.i useCustomJavaDefault = 0
 Global.s javaBinaryPathDefault = "C:\jre8\bin\javaw.exe"
 
-Define.s launcherVersion = "2.0.0"
+Define.s launcherVersion = "2.0.2"
 Define.s launcherDeveloper = "Kron4ek&Jedai86"
 
 
@@ -113,6 +116,11 @@ Declare.s removeSpacesFromVersionName(clientVersion.s)
 
 programFilesDir(0) = GetEnvironmentVariable("ProgramW6432") + "\"
 programFilesDir(1) = GetEnvironmentVariable("PROGRAMFILES") + "\"
+
+; Add different java variants
+javaPaths(0) = "Java"
+javaPaths(1) = "BellSoft"
+javaPaths(2) = "Eclipse Adoptium"
 
 
 SetCurrentDirectory(workingDirectory)
@@ -202,9 +210,11 @@ If OpenWindow(0, #PB_Ignore, #PB_Ignore, windowWidth, windowHeight, "Vortex Mine
             If ReadPreferenceInteger("UseCustomJava", useCustomJavaDefault)
               javaBinaryPath = ReadPreferenceString("JavaPath", javaBinaryPathDefault)
             ElseIf Right(javaBinaryPath, 5) = "(x32)"
-              javaBinaryPath = programFilesDir(1) + "Java\" + RemoveString(javaBinaryPath, " (x32)") + "\bin\javaw.exe"
+              FindMapElement(javaBinMap(), javaBinaryPath)
+              javaBinaryPath = programFilesDir(1) + javaPaths(javaBinMap()) + "\" + RemoveString(javaBinaryPath, " (x32)") + "\bin\javaw.exe"
             Else
-              javaBinaryPath = programFilesDir(0) + "Java\" + javaBinaryPath + "\bin\javaw.exe"
+              FindMapElement(javaBinMap(), javaBinaryPath)
+              javaBinaryPath = programFilesDir(0) + javaPaths(javaBinMap()) + "\" + javaBinaryPath + "\bin\javaw.exe"
             EndIf
 
             If Val(ramAmount) < 512
@@ -858,12 +868,13 @@ Procedure.s parseLibraries(clientVersion.s, prepareForDownload.i = 0)
   Protected.i jsonLibrariesArray, jsonArrayElement, jsonFile, fileSize, downloadListFile, zipFile
   Protected.i jsonArtifactsMember, jsonDownloadsMember, jsonUrlMember, jsonClassifiersMember, jsonNativesLinuxMember
   Protected.i jsonRulesMember, jsonRulesOsMember
-  Protected.i i, k
+  Protected.i i, k, met, n
   Protected.i allowLib
 
   Protected.s libName, libsString, packFileName, url
   Protected.s jsonRulesOsName
   Protected Dim libSplit.s(3)
+  Protected Dim fileSplit.s(10)
 
   If prepareForDownload = 1
     downloadListFile = OpenFile(#PB_Any, tempDirectory + "vlauncher_download_list.txt")
@@ -964,7 +975,20 @@ Procedure.s parseLibraries(clientVersion.s, prepareForDownload.i = 0)
                   packFileName = PackEntryName(zipFile)
 
                   If FileSize("versions\" + clientVersion + "\natives\" + packFileName) < 1
-                    UncompressPackFile(zipFile, "versions\" + clientVersion + "\natives\" + packFileName)
+                    
+                    met = FindString(packFileName, "META-INF")
+                    If met = 0
+                      n = CountString(packFileName, "/")
+                      If n = 0
+                        UncompressPackFile(zipFile, "versions\" + clientVersion + "\natives\" + packFileName)
+                      Else
+                        For k = 1 To n + 1
+                          fileSplit(k) = StringField(packFileName, k, "/")
+                        Next
+                        UncompressPackFile(zipFile, "versions\" + clientVersion + "\natives\" + fileSplit(n+1))
+                      EndIf
+                    EndIf
+                    
                   EndIf
                 EndIf
               Wend
@@ -1190,8 +1214,8 @@ EndProcedure
 
 Procedure findJava()
   Protected.s dirName, javaBinaryPath, customJavaPath, javabinConfig, javaItemText
-  Protected.i i, directory, numberJavaItems, k
-
+  Protected.i i, directory, numberJavaItems, k, j
+  
   ClearGadgetItems(javaListGadget)
   DisableGadget(javaListGadget, 0)
 
@@ -1206,24 +1230,29 @@ Procedure findJava()
   Else
     For i = 0 To 1
       If programFilesDir(i) <> "\"
-        directory = ExamineDirectory(#PB_Any, programFilesDir(i) + "Java", "*")
-
-        If directory
-          While NextDirectoryEntry(directory) And DirectoryEntryType(directory) = #PB_DirectoryEntry_Directory
-            dirName = DirectoryEntryName(directory)
-
-            If dirName <> ".." And dirName <> "." And FileSize(programFilesDir(i) + "Java\" + dirName + "\bin\javaw.exe") > 0
-              If i
-                dirName + " (x32)"
+        
+        For j = 0 To 2
+          directory = ExamineDirectory(#PB_Any, programFilesDir(i) + javaPaths(j), "*")
+  
+          If directory
+            While NextDirectoryEntry(directory) And DirectoryEntryType(directory) = #PB_DirectoryEntry_Directory
+              dirName = DirectoryEntryName(directory)
+  
+              If dirName <> ".." And dirName <> "." And FileSize(programFilesDir(i) + javaPaths(j) + "\" + dirName + "\bin\javaw.exe") > 0
+                If i
+                  dirName + " (x32)"
+                EndIf
+                
+                javaBinMap(dirName) = j
+  
+                AddGadgetItem(javaListGadget, -1, dirName)
+                SetGadgetState(javaListGadget, 0)
               EndIf
-
-              AddGadgetItem(javaListGadget, -1, dirName)
-              SetGadgetState(javaListGadget, 0)
-            EndIf
-          Wend
-
-          FinishDirectory(directory)
-        EndIf
+            Wend
+  
+            FinishDirectory(directory)
+          EndIf
+        Next
       EndIf
     Next
 

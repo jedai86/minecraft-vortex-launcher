@@ -97,7 +97,7 @@ Define.i useOptimisedLaunchDefault = 0
 Global.i useCustomJavaDefault = 0
 Global.s javaBinaryPathDefault = "C:\jre8\bin\javaw.exe"
 
-Define.s launcherVersion = "2.0.2"
+Define.s launcherVersion = "2.0.3"
 Define.s launcherDeveloper = "Kron4ek&Jedai86"
 
 
@@ -873,7 +873,7 @@ Procedure.s parseLibraries(clientVersion.s, prepareForDownload.i = 0)
 
   Protected.s libName, libsString, packFileName, url
   Protected.s jsonRulesOsName
-  Protected Dim libSplit.s(3)
+  Protected Dim libSplit.s(4)
   Protected Dim fileSplit.s(10)
 
   If prepareForDownload = 1
@@ -917,13 +917,18 @@ Procedure.s parseLibraries(clientVersion.s, prepareForDownload.i = 0)
 
       If allowLib
         libName = GetJSONString(GetJSONMember(jsonArrayElement, "name"))
-
-        For k = 1 To 3
+        
+        libSplit(4) = ""
+        For k = 1 To 4
           libSplit(k) = StringField(libName, k, ":")
         Next
 
         libName = ReplaceString(libSplit(1), ".", "\") + "\" + libSplit(2) + "\" + libSplit(3) + "\" + libSplit(2) + "-" + libSplit(3)
-
+        
+        If libSplit(4)
+          libName + "-" + libSplit(4)
+        EndIf
+        
         If prepareForDownload = 1
           jsonDownloadsMember = GetJSONMember(jsonArrayElement, "downloads")
 

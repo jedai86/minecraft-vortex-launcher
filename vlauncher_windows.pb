@@ -53,25 +53,25 @@ Select maxSystemMemory
   Case 128 To 1899
     defaultMemory = 512
     maxFreeMemory = 512
-  Case 1900 To 2100
+  Case 1900 To 2999
     defaultMemory = 1000
     maxFreeMemory = 1024
-  Case 3000 To 4100
+  Case 3000 To 5899
     defaultMemory = 2048
     maxFreeMemory = 2536
-  Case 5900 To 6100
+  Case 5900 To 7499
     defaultMemory = 3072
     maxFreeMemory = 4096
-  Case 8000 To 9000
+  Case 7500 To 9999
     defaultMemory = 6000
     maxFreeMemory = 6144
-  Case 9900 To 13000
+  Case 10000 To 13999
     defaultMemory = 8000
     maxFreeMemory = 8192
   Case 14000 To 17000
     defaultMemory = 8192
     maxFreeMemory = maxSystemMemory - 2048
-  Case 17100 To 512000
+  Case 17001 To 512000
     defaultMemory = 10240
     maxFreeMemory = maxSystemMemory - 4096
   Default
@@ -97,7 +97,7 @@ Define.i useOptimisedLaunchDefault = 0
 Global.i useCustomJavaDefault = 0
 Global.s javaBinaryPathDefault = "C:\jre8\bin\javaw.exe"
 
-Define.s launcherVersion = "2.0.3"
+Define.s launcherVersion = "2.0.4"
 Define.s launcherDeveloper = "Kron4ek&Jedai86"
 
 

@@ -1,31 +1,30 @@
 ## Vortex Minecraft Launcher
 
-Fast, lightweight and easy to use Minecraft launcher. Natively available for Windows and Linux.
+Быстрый, лёгкий и удобный лаунчер для Minecraft. Модифицирован, полностью на русском языке, оригинал тут[**тут**]((https://github.com/Kron4ek/minecraft-vortex-launcher))
 
 ---
 
-## Features
+## Особенности
 
-* Lightweight and fast
-* Open-Source
-* Cross-Platform (available for Windows and Linux)
-* Supports all Minecraft versions
-* Supports Forge and other APIs
-* Downloads all Minecraft versions
-* Downloads missing libraries
-* Doesn't require Minecraft account
-* Doesn't require Java to work
-* Can work fully offline
-
----
-
-## Download
-
-Check the [**Releases**](https://github.com/jedai86/minecraft-vortex-launcher/releases) page to download the latest launcher version.
+* Лёгкий и быстрый
+* Открытый исходный код
+* Поддерживает все версии Minecraft
+* Поддерживает Forge и другие API
+* Скачивает все версии Minecraft
+* Загружает недостающие библиотеки
+* Не требует учётной записи Minecraft
+* Не требует установленной Java
+* Может работать полностью офлайн
 
 ---
 
-## Screenshots
+## Скачать
+
+Проверьте страницу [**Releases**](https://github.com/jedai86/minecraft-vortex-launcher/releases) чтобы скачать последнюю версию лаунчера.
+
+---
+
+## Скриншот
 
 
 ![main window](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/screen/Vlauncher_2.png)
@@ -33,7 +32,7 @@ Check the [**Releases**](https://github.com/jedai86/minecraft-vortex-launcher/re
 
 ---
 
-## License
+## Лицензия
 
 [GPLv3](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/LICENSE.txt)
 

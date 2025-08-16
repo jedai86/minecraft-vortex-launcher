@@ -1,6 +1,6 @@
 ## Vortex Minecraft Launcher
 
-Быстрый, лёгкий и удобный лаунчер для Minecraft. Модифицирован, полностью на русском языке, оригинал тут[**тут**]((https://github.com/Kron4ek/minecraft-vortex-launcher))
+Быстрый, лёгкий и удобный лаунчер для Minecraft. Мой форк, немного модифицирован и улучшен, полностью на русском языке, оригинал [**ТУТ**](https://github.com/Kron4ek/minecraft-vortex-launcher/)
 
 ---
 
@@ -27,7 +27,7 @@
 ## Скриншот
 
 
-![main window](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/screen/Vlauncher_2.png)
+![main window](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/screen/Vlauncher.png)
 
 
 ---

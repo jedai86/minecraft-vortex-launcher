@@ -27,7 +27,7 @@
 ## Скриншот
 
 
-![main window](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/screen/Vlauncher.png)
+![main window](https://github.com/jedai86/minecraft-vortex-launcher/blob/master/Vlauncher.png)
 
 
 ---
